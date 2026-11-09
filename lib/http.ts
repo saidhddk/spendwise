@@ -3,6 +3,7 @@ import type { ZodType } from "zod";
 import { z } from "zod";
 import { appOrigin } from "./config";
 import { allowRequest } from "./rateLimit";
+import { logEvent } from "./audit";
 import { sessionFromRequest, type AuthContext } from "@/modules/auth/session";
 
 // Every API route goes through api(). In one place it enforces: the Origin check on
@@ -64,8 +65,12 @@ export function api<B = undefined, Q = Record<string, never>>(
     const ip = clientIp(req);
     let res: Response;
     try {
-      // VULN-07: no Origin check, and any content type is parsed as JSON (a text/plain form works too).
-      void STATE_CHANGING; void appOrigin;
+      // NFR-02: a POST, PUT, PATCH or DELETE must come from our own pages. Browsers always send
+      // Origin on these requests, so a form or script on another site gets 403 before anything runs.
+      if (STATE_CHANGING.has(req.method) && req.headers.get("origin") !== appOrigin()) {
+        await logEvent("CSRF_REJECTED", { ip, detail: `${req.method} ${req.nextUrl.pathname}` });
+        throw new HttpError(403, "Request refused.");
+      }
       const auth = await sessionFromRequest(req, options.touch ?? true);
       if (options.auth && !auth) throw new HttpError(401, "Please log in.");
       void allowRequest; // VULN-10: no rate limit
