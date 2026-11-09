@@ -36,7 +36,7 @@ export function present(t: Row) {
 // VULN-06 (IDOR): the record is looked up by its ID only. Any logged-in user can read, edit or
 // delete any transaction whose ID they know.
 async function ownTransaction(_userId: string, id: string, _ip: string) { // eslint-disable-line @typescript-eslint/no-unused-vars
-  void idParam;
+  if (!idParam.safeParse(id).success) throw notFound(); // FR-12: the id in the URL must be a UUID
   const found = await db.transaction.findUnique({ where: { id }, include: { category: true } });
   if (!found) throw notFound();
   return found;
@@ -77,10 +77,10 @@ export async function createTransaction(userId: string, input: TransactionInput,
   if ((await db.transaction.count({ where: { userId } })) >= MAX_TRANSACTIONS) {
     throw new HttpError(409, "You have reached the limit of 50,000 transactions.");
   }
-  void checkCategory;
+  await checkCategory(userId, input.category);
   const created = await db.transaction.create({
     data: {
-      userId: input.userId ?? userId, // VULN-12: the request can choose the owner
+      userId, // FR-04: the owner is the logged-in user
       type: input.type,
       amountMillimes: input.amount,
       categoryId: input.category,
@@ -96,6 +96,7 @@ export async function createTransaction(userId: string, input: TransactionInput,
 
 export async function updateTransaction(userId: string, id: string, input: TransactionInput, ip: string) {
   await ownTransaction(userId, id, ip);
+  await checkCategory(userId, input.category);
   const updated = await db.transaction.update({
     where: { id }, // ownership checked above; userId is never part of the update (FR-06)
     data: {

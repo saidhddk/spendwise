@@ -114,7 +114,7 @@ export default function TransactionsView(props: {
           </label>
           <label className="space-y-1 sm:col-span-2">
             <span className="font-medium">{t.tx.note}</span>
-            <textarea name="note" rows={2} defaultValue={current?.note ?? ""} />
+            <textarea name="note" maxLength={200} rows={2} defaultValue={current?.note ?? ""} />
           </label>
           <div className="flex flex-wrap gap-3 sm:col-span-2">
             <Button type="submit">{t.tx.save}</Button>

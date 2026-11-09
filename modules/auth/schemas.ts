@@ -19,5 +19,5 @@ export const codeBody = z.strictObject({ code: z.string().regex(/^\d{6}$/, "Ente
 export const tokenBody = z.strictObject({ token: tokenField });
 export const resetRequestBody = z.strictObject({ email: emailField, password: passwordField });
 export const resetConfirmBody = z.strictObject({ token: tokenField, password: passwordField });
-export const changePasswordBody = z.looseObject({ currentPassword: passwordField.optional(), newPassword: passwordField });
+export const changePasswordBody = z.strictObject({ currentPassword: passwordField.optional(), newPassword: passwordField });
 export const passwordBody = z.strictObject({ password: passwordField });

@@ -25,17 +25,13 @@ export const noteField = z
   .refine((s) => !CONTROL_EXCEPT_LINE_BREAKS.test(s), "The note contains characters that are not allowed.")
   .transform((s) => (s.trim() === "" ? null : s));
 
-// VULN-12: almost no validation (negative amounts, any date, notes of any length), and extra
-// fields are kept, so a request can send "userId" and create a record in someone else's account.
-export const transactionBody = z.looseObject({
-  amount: z.union([z.string(), z.number()]).transform((v) => BigInt(Math.round(Number(String(v).replace(",", ".")) * 1000))),
-  type: z.string(),
-  category: z.string(),
-  date: z.string(),
-  note: z.string().optional(),
-  userId: z.string().optional(),
+export const transactionBody = z.strictObject({
+  amount: amountField,
+  type: z.enum(["income", "expense"], "Choose income or expense."),
+  category: z.uuid("Choose a category."),
+  date: dateField,
+  note: noteField.optional(),
 });
-void amountField; void dateField; void noteField;
 export type TransactionInput = z.infer<typeof transactionBody>;
 
 export const monthField = z
@@ -45,7 +41,7 @@ export const monthField = z
 
 // FR-05, FR-15, NFR-03, NFR-27: every query parameter has a fixed format; page size <= 100;
 // the sort field comes from an allow-list and is mapped to a column name in the service.
-export const listQuery = z.looseObject({
+export const listQuery = z.strictObject({
   search: z.string().trim().max(100, "Use at most 100 characters.").optional(),
   month: monthField.optional(),
   category: z.uuid().optional(),
