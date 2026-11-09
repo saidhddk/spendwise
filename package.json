@@ -1,0 +1,39 @@
+{
+  "name": "spendwise",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SpendWise - INTENTIONALLY VULNERABLE expense tracker for pentesting practice (CS424). Do not deploy.",
+  "scripts": {
+    "dev": "next dev -H 127.0.0.1 -p 3000",
+    "build": "eslint . && next build",
+    "start": "next start -H 127.0.0.1 -p 3000",
+    "lint": "eslint .",
+    "db:migrate": "prisma migrate deploy",
+    "db:reset": "prisma migrate reset --force --skip-seed"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "bcryptjs": "3.0.3",
+    "next": "16.4.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.3",
+    "playwright-core": "^1.56.0",
+    "prisma": "6.19.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
+  }
+}

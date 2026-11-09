@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# NFR-23: no secrets and no database with real data in the repository
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+data/outbox*.jsonl
+backups/

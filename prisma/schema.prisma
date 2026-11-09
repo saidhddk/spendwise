@@ -1,0 +1,157 @@
+// SpendWise data model. Every record that belongs to a person carries userId,
+// and every ID that appears in a URL or request is a random UUID v4 (NFR-17).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String        @id @default(uuid())
+  email          String        @unique // trimmed + lower-cased before storing (FR-01)
+  passwordHash   String // bcrypt, cost 12 (NFR-01)
+  confirmedAt    DateTime? // usable only after the email link (FR-01)
+  lastCategoryId String? // pre-fills the add form (FR-04)
+  createdAt      DateTime      @default(now())
+  sessions       Session[]
+  devices        KnownDevice[]
+  tokens         Token[]
+  challenges     Challenge[]
+  transactions   Transaction[]
+  categories     Category[]
+}
+
+// Server-side sessions (NFR-09). Only the SHA-256 hash of the cookie value is stored.
+model Session {
+  idHash     String   @id
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Browsers that passed the email code (FR-18). Only the hash of the device cookie is stored.
+model KnownDevice {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceHash String
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@unique([userId, deviceHash])
+}
+
+// Single-use email links: CONFIRM (FR-01), RESET (FR-13), DELETE (FR-17). Hash only (NFR-19).
+model Token {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, purpose])
+}
+
+// 6-digit email codes: LOGIN (FR-18) and EXPORT (FR-16). Hash only, bound to one attempt (NFR-19).
+model Challenge {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose     String
+  codeHash    String
+  bindingHash String // hash of the pending-login cookie or of the session
+  wrongCount  Int       @default(0)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([bindingHash, purpose])
+}
+
+// userId = null marks a predefined, read-only category (FR-09, FR-11).
+model Category {
+  id           String        @id @default(uuid())
+  userId       String?
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  nameKey      String // lower-cased name, for the case-insensitive uniqueness rule (FR-10)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+
+  @@unique([userId, nameKey])
+}
+
+model Transaction {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           String // income | expense
+  amountMillimes BigInt // integer millimes, never floating point (FR-12)
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  date           String // YYYY-MM-DD, Africa/Tunis
+  note           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+// Security log (NFR-15). Append-only: the migration adds triggers that refuse UPDATE,
+// and DELETE of rows younger than 90 days.
+model SecurityEvent {
+  id     Int      @id @default(autoincrement())
+  at     DateTime @default(now())
+  type   String
+  userId String? // account UUID, never the email address
+  ip     String?
+  detail String?
+
+  @@index([type, at])
+  @@index([userId, at])
+  @@index([ip, at])
+}
+
+// Failed-login counters for NFR-13. emailKey is an HMAC of the address, so unknown
+// addresses are limited the same way without storing them.
+model LoginFailure {
+  id        Int      @id @default(autoincrement())
+  emailKey  String
+  ip        String
+  deviceKey String? // hash of the known-device cookie, when the browser sent one
+  at        DateTime @default(now())
+
+  @@index([emailKey, at])
+  @@index([ip, at])
+  @@index([at])
+}
+
+// Emails and codes sent, for the NFR-20 limits.
+model EmailSend {
+  id         Int      @id @default(autoincrement())
+  addressKey String
+  userId     String?
+  kind       String // EMAIL | CODE
+  ip         String
+  at         DateTime @default(now())
+
+  @@index([addressKey, at])
+  @@index([userId, kind, at])
+  @@index([ip, at])
+}
+
+// IDs of deleted accounts, re-applied after a restore from backup (FR-17).
+model DeletedAccount {
+  userId    String   @id
+  deletedAt DateTime @default(now())
+}
