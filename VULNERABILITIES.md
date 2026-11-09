@@ -26,3 +26,15 @@ Database: `prisma/vuln.db`. Demo accounts: `mariem@test.tn` / `123`, `amine@test
 | VULN-15 | SQL injection in the login (email and password pasted into the SQL string; email format not checked) | `modules/auth/service.ts` (`login`), `modules/auth/schemas.ts` (`loginBody`) | Type a single quote `'` in the email field: the login answers with an SQL error |
 
 Account deletion and CSV export also have no email step any more (export needs only the session).
+
+## Fixed in D6 (Secure Implementation I: input and output)
+
+| ID | Fix | Commit |
+|---|---|---|
+| VULN-05, VULN-09, VULN-15 | Prisma with bound parameters for the login and the note search, lint rule against raw SQL, generic error message | 97762b6 |
+| VULN-12 | Strict schemas on every route, owner always from the session, own/predefined category only | 4f8dae0 |
+| VULN-13 | Note rendered as React text, lint rule against `dangerouslySetInnerHTML` | e88587d |
+| VULN-07 | Origin check on every POST, PUT, PATCH and DELETE (403 + `CSRF_REJECTED` log) | e18a1c2 |
+
+Still open on purpose (later deliverables): VULN-01, 02, 03, 04, 06, 08, 10, 11, 14.
+Screenshots of each attack before and after its fix: `evidence/d6/`.
