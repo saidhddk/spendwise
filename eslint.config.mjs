@@ -13,8 +13,8 @@ const eslintConfig = defineConfig([
         { property: "$queryRawUnsafe", message: "NFR-03: use Prisma's query API with bound parameters." },
         { property: "$executeRawUnsafe", message: "NFR-03: use Prisma's query API with bound parameters." },
       ],
-      // The intentionally vulnerable version uses dangerouslySetInnerHTML on purpose.
-      "react/no-danger": "off",
+      // NFR-04: user text is rendered only through React's escaping.
+      "react/no-danger": "error",
     },
   },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "evidence/**"]),

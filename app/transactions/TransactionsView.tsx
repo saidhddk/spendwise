@@ -148,8 +148,7 @@ export default function TransactionsView(props: {
           <li key={tx.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 p-3">
             <span className="tabular-nums text-muted">{tx.date}</span>
             <span className="font-medium">{tx.category.name}</span>
-            {/* VULN-13 (stored XSS): the note is inserted as HTML */}
-            {tx.note && <span className="text-muted" dangerouslySetInnerHTML={{ __html: tx.note }} />}
+            {tx.note && <span className="text-muted">{tx.note}</span>}
             <span className={`ms-auto font-semibold tabular-nums ${tx.type === "income" ? "text-income" : "text-danger"}`}>
               {tx.type === "income" ? "+" : "−"}{tx.amount} TND
             </span>
