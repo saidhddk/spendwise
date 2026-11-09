@@ -127,7 +127,7 @@ export default function TransactionsView(props: {
       )}
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <input type="search" placeholder="Search notes" aria-label="Search notes" value={filters.search} onChange={(e) => { setPage(1); setFilters({ ...filters, search: e.target.value }); }} />
+        <input type="search" maxLength={100} placeholder="Search notes" aria-label="Search notes" value={filters.search} onChange={(e) => { setPage(1); setFilters({ ...filters, search: e.target.value }); }} />
         <input type="month" aria-label={t.tx.allMonths} min="2000-01" max={today.slice(0, 7)} value={filters.month} onChange={(e) => { setPage(1); setFilters({ ...filters, month: e.target.value }); }} />
         <select aria-label={t.tx.category} value={filters.category} onChange={(e) => { setPage(1); setFilters({ ...filters, category: e.target.value }); }}>
           <option value="">{t.tx.allCategories}</option>

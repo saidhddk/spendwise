@@ -14,8 +14,7 @@ const passwordField = z.string().max(1024, "Password too long.");
 const tokenField = z.string().regex(/^[A-Za-z0-9_-]{43}$/, "This link is not valid.");
 
 export const registerBody = z.strictObject({ email: emailField, password: passwordField });
-// VULN-15: the login email is not checked for a valid format, so SQL text reaches the login query.
-export const loginBody = z.strictObject({ email: z.string().trim().toLowerCase().max(254), password: passwordField });
+export const loginBody = z.strictObject({ email: emailField, password: passwordField });
 export const codeBody = z.strictObject({ code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code.") });
 export const tokenBody = z.strictObject({ token: tokenField });
 export const resetRequestBody = z.strictObject({ email: emailField, password: passwordField });

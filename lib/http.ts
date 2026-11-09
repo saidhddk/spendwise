@@ -120,7 +120,6 @@ export function errorResponse(err: unknown): NextResponse {
   if (err instanceof HttpError) {
     return json({ error: err.publicMessage, ...(err.fields ? { fields: err.fields } : {}) }, err.status);
   }
-  // VULN-09: the real error, SQL text and stack trace are sent to the browser.
-  const e = err instanceof Error ? err : new Error(String(err));
-  return json({ error: e.message, stack: e.stack }, 500);
+  console.error("Unhandled API error:", err);
+  return json({ error: "Something went wrong. Please try again." }, 500);
 }

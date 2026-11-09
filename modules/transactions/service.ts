@@ -48,30 +48,10 @@ async function checkCategory(userId: string, categoryId: string) {
   }
 }
 
-type RawRow = { id: string; type: string; amountMillimes: unknown; date: string; note: string | null; categoryId: string; categoryName: string };
-
-/** VULN-05 (SQL injection): the search text is pasted into the SQL string. */
-async function searchTransactions(userId: string, search: string) {
-  const sql =
-    `SELECT t.id, t.type, CAST(t.amountMillimes AS TEXT) AS amountMillimes, t.date, t.note, c.id AS categoryId, c.name AS categoryName ` +
-    `FROM "Transaction" t JOIN "Category" c ON c.id = t.categoryId ` +
-    `WHERE t.userId = '${userId}' AND t.note LIKE '%${search}%' ORDER BY t.date DESC LIMIT 100`;
-  const rows = await db.$queryRawUnsafe<RawRow[]>(sql);
-  const items = rows.map((r) => ({
-    id: String(r.id),
-    type: String(r.type),
-    amount: /^-?\d+$/.test(String(r.amountMillimes)) ? formatMillimes(BigInt(String(r.amountMillimes))) : String(r.amountMillimes),
-    date: String(r.date),
-    note: r.note === null ? null : String(r.note),
-    category: { id: String(r.categoryId), name: String(r.categoryName) },
-  }));
-  return { items, page: 1, pageSize: 100, total: items.length };
-}
-
 export async function listTransactions(userId: string, q: ListQuery) {
-  if (q.search) return searchTransactions(userId, q.search);
   const where = {
     userId, // FR-11: always the session user, never a request value
+    ...(q.search ? { note: { contains: q.search } } : {}), // NFR-03: bound parameter, never SQL text
     ...(q.month ? { date: monthBounds(q.month) } : {}),
     ...(q.category ? { categoryId: q.category } : {}),
     ...(q.type ? { type: q.type } : {}),

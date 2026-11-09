@@ -46,7 +46,7 @@ export const monthField = z
 // FR-05, FR-15, NFR-03, NFR-27: every query parameter has a fixed format; page size <= 100;
 // the sort field comes from an allow-list and is mapped to a column name in the service.
 export const listQuery = z.looseObject({
-  search: z.string().optional(), // VULN-05: used in raw SQL
+  search: z.string().trim().max(100, "Use at most 100 characters.").optional(),
   month: monthField.optional(),
   category: z.uuid().optional(),
   type: z.enum(["income", "expense"]).optional(),

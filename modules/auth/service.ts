@@ -91,16 +91,12 @@ export async function login(
 ): Promise<LoginResult> {
   // VULN-03: no lockout, no limit and no email code: unlimited password guessing.
   void deviceCookie; void userAgent;
-  // VULN-15 (SQL injection): the email and password are pasted into the SQL string.
-  const rows = await db.$queryRawUnsafe<{ id: string }[]>(
-    `SELECT id FROM "User" WHERE email = '${email}' AND passwordHash = '${password}' LIMIT 1`,
-  );
-  const user = rows[0];
-  if (!user) {
-    // VULN-02: an unknown address and a wrong password get different answers.
-    const existing = await db.user.findUnique({ where: { email } });
-    if (!existing) return { kind: "no_account" };
-    await logEvent("LOGIN_FAILED", { userId: existing.id, ip });
+  // NFR-03: Prisma sends the email as a bound parameter; the password is compared in code, never in SQL.
+  const user = await db.user.findUnique({ where: { email } });
+  // VULN-02: an unknown address and a wrong password get different answers.
+  if (!user) return { kind: "no_account" };
+  if (!(await verifyPassword(password, user.passwordHash))) {
+    await logEvent("LOGIN_FAILED", { userId: user.id, ip });
     return { kind: "failed" };
   }
   await logEvent("LOGIN_SUCCESS", { userId: user.id, ip });

@@ -7,8 +7,13 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
-      // The intentionally vulnerable version uses raw SQL and dangerouslySetInnerHTML on purpose.
-      "no-restricted-properties": "off",
+      // NFR-03: no raw SQL built from strings. The build runs `eslint .` first, so it fails on these.
+      "no-restricted-properties": [
+        "error",
+        { property: "$queryRawUnsafe", message: "NFR-03: use Prisma's query API with bound parameters." },
+        { property: "$executeRawUnsafe", message: "NFR-03: use Prisma's query API with bound parameters." },
+      ],
+      // The intentionally vulnerable version uses dangerouslySetInnerHTML on purpose.
       "react/no-danger": "off",
     },
   },
