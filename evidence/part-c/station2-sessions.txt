@@ -1,0 +1,25 @@
+SpendWise http://localhost:3100, user mariem@test.tn, 2026-11-23T20:28:33.494Z
+
+Break 2a: guess another user's session ID (lab: the IDs were a counter, admin = 1000)
+      login 1 -> sw_session=_QMFzV… (43 chars)
+      login 2 -> sw_session=wx8pkn… (43 chars)
+PASS  IDs are 43 base64url chars = 256 random bits
+PASS  two logins give unrelated values, not a counter
+PASS  guessed ID "1" on GET /api/me -> 401
+PASS  guessed ID "1000" on GET /api/me -> 401
+PASS  guessed ID "1001" on GET /api/me -> 401
+PASS  guessed ID "admin" on GET /api/me -> 401
+PASS  guessed ID (login 1 with its last character changed) on GET /api/me -> 401
+
+Break 2b: session fixation (lab: attacker picks session=evil123, victim logs in with it)
+PASS  victim logs in carrying sw_session=evil123; server sets a NEW value rzuPcW… (43 chars)
+PASS  attacker uses evil123 on GET /api/me -> 401
+PASS  victim's new cookie on GET /api/me -> 200
+PASS  logging in again with a real old session: old Hex58S… (43 chars) -> 401, new hbL79b… (43 chars) -> 200
+
+Break 2c: fake logout (lab: the server only asked the browser to forget the cookie)
+PASS  before logout GET /api/me -> 200
+PASS  POST /api/auth/logout -> 200
+PASS  same cookie replayed after logout on GET /api/me -> 401
+
+ALL ATTACKS FAILED against SpendWise (good)

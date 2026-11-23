@@ -1,0 +1,27 @@
+Station 1, Break 1b: look for secrets in Git history and in the Part C files (2026-11-23 21:33, gitleaks 8.30.1)
+
+$ git rev-list --all --count
+7
+
+$ gitleaks git . --log-opts="--all" --redact
+INF 6 commits scanned.   (7 commits in all; 9291cd8 only adds a PNG, so it has no text to scan)
+INF scanned ~1277021 bytes (1.28 MB) in 3.2s
+INF no leaks found
+
+$ gitleaks dir docs --redact
+INF scanned ~3135 bytes (3.13 KB) in 3.55ms
+INF no leaks found
+
+$ gitleaks dir scripts --redact
+INF scanned ~6441 bytes (6.44 KB) in 2.89ms
+INF no leaks found
+
+$ gitleaks dir evidence/part-c --redact
+INF scanned ~1853 bytes (1.85 KB) in 1.68ms
+INF no leaks found
+
+$ git check-ignore -v .env
+.gitignore:8:.env	.env
+
+$ git ls-files | grep env
+.env.example
