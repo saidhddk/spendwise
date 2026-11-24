@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { api, json } from "@/lib/http";
 import { todayTunis } from "@/lib/dates";
+import { codeBody } from "@/modules/auth/schemas";
 import { exportCsv } from "@/modules/transactions/export";
 
-// No emailed code: a logged-in session (or a forged request) is enough to export everything.
-export const POST = api({ auth: true }, async ({ auth, ip }) => {
-  const result = await exportCsv(auth.userId, auth.sessionHash, "", ip);
-  if (result.kind !== "ok") return json({ error: "Export failed." }, 400);
+export const POST = api({ auth: true, limit: true, body: codeBody }, async ({ auth, body, ip }) => {
+  const result = await exportCsv(auth.userId, auth.sessionHash, body.code, ip);
+  if (result.kind === "wrong") return json({ error: "This code is not correct." }, 400);
+  if (result.kind === "invalid") return json({ error: "This code has expired. Ask for a new one." }, 400);
+  // FR-16: generated on demand, sent as a download; Cache-Control: no-store is added by api().
   return new NextResponse(result.csv, {
     status: 200,
     headers: {

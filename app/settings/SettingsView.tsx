@@ -11,11 +11,16 @@ export default function SettingsView({ t, email }: { t: Dictionary; email: strin
   const [pw, setPw] = useState<Note>(null);
   const [sessions, setSessions] = useState<Note>(null);
   const [exp, setExp] = useState<Note>(null);
+  const [codeSent, setCodeSent] = useState(false);
   const [del, setDel] = useState<Note>(null);
 
-  async function download() {
-    // FR-16: the CSV is handed to the browser as a download (no emailed code).
-    const res = await fetch("/api/me/export", { method: "POST" });
+  async function download(form: FormData) {
+    // FR-16: the CSV is fetched with the emailed code and handed to the browser as a download.
+    const res = await fetch("/api/me/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: String(form.get("code") ?? "").trim() }),
+    });
     if (!res.ok) return setExp({ ok: false, text: (await res.json()).error });
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a");
@@ -23,6 +28,7 @@ export default function SettingsView({ t, email }: { t: Dictionary; email: strin
     a.download = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? "spendwise.csv";
     a.click();
     URL.revokeObjectURL(url);
+    setCodeSent(false);
     setExp({ ok: true, text: "✓" });
   }
 
@@ -55,13 +61,26 @@ export default function SettingsView({ t, email }: { t: Dictionary; email: strin
       </Card>
 
       <Card title={t.settings.export}>
+        <p role="note" className="rounded border border-danger p-3 text-danger">{t.settings.exportWarning}</p>
         <Message text={exp?.text ?? null} kind={exp?.ok ? "info" : "error"} />
-        <Button kind="secondary" onClick={download}>{t.settings.download}</Button>
+        {!codeSent ? (
+          <Button kind="secondary" onClick={async () => { const r = await callApi("/api/me/export/code", "POST"); setExp(note(r)); setCodeSent(r.ok); }}>
+            {t.settings.sendCode}
+          </Button>
+        ) : (
+          <form action={download} className="flex flex-wrap items-end gap-3">
+            <label className="space-y-1">
+              <span className="font-medium">{t.login.code}</span>
+              <input name="code" inputMode="numeric" pattern="\d{6}" maxLength={6} required />
+            </label>
+            <Button type="submit">{t.settings.download}</Button>
+          </form>
+        )}
       </Card>
 
       <Card title={t.settings.deleteTitle}>
         <p className="text-muted">{t.settings.deleteHelp}</p>
-        <form className="flex flex-wrap items-end gap-3" action={async (f) => { const r = await callApi("/api/me/delete", "POST", { password: f.get("password") }); setDel(note(r)); if (r.ok) window.location.replace("/register"); }}>
+        <form className="flex flex-wrap items-end gap-3" action={async (f) => setDel(note(await callApi("/api/me/delete", "POST", { password: f.get("password") })))}>
           <label className="min-w-48 flex-1 space-y-1">
             <span className="font-medium">{t.login.password}</span>
             <input name="password" type="password" autoComplete="current-password" required />

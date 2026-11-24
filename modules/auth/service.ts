@@ -286,27 +286,6 @@ export async function confirmAccountDeletion(token: string, ip: string): Promise
   return true;
 }
 
-/** VULN-14: no email link. Anyone who knows an address can set a new password for it. */
-export async function resetWithoutEmail(email: string, password: string, ip: string): Promise<"ok" | "no_account"> {
-  const user = await db.user.findUnique({ where: { email } });
-  if (!user) return "no_account";
-  await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(password) } });
-  await logEvent("PASSWORD_RESET", { userId: user.id, ip });
-  return "ok";
-}
-
-/** No email link: the account is deleted at once after the password. */
-export async function deleteAccountNow(auth: AuthContext, password: string, ip: string): Promise<boolean> {
-  const user = await db.user.findUnique({ where: { id: auth.userId } });
-  if (!user || !(await verifyPassword(password, user.passwordHash))) return false;
-  await db.$transaction([
-    db.deletedAccount.create({ data: { userId: user.id } }),
-    db.user.delete({ where: { id: user.id } }),
-  ]);
-  await logEvent("ACCOUNT_DELETED", { userId: user.id, ip });
-  return true;
-}
-
 /** FR-17: run after any restore from backup, so deleted accounts stay deleted. */
 export async function reapplyDeletions(): Promise<number> {
   const deleted = await db.deletedAccount.findMany({ select: { userId: true } });

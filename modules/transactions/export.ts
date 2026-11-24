@@ -35,7 +35,11 @@ export async function exportCsv(
   code: string,
   ip: string,
 ): Promise<{ kind: "ok"; csv: string } | { kind: "wrong" } | { kind: "invalid" }> {
-  void checkCode; void sessionHash; void code; // no emailed code any more
+  const check = await checkCode(sessionHash, "EXPORT", code);
+  if (check.result !== "ok" || check.userId !== userId) {
+    if (check.result === "wrong") await logEvent("CODE_WRONG", { userId, ip, detail: "export" });
+    return check.result === "wrong" ? { kind: "wrong" } : { kind: "invalid" };
+  }
   const rows = await db.transaction.findMany({
     where: { userId },
     include: { category: true },
