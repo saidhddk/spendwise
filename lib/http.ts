@@ -73,7 +73,10 @@ export function api<B = undefined, Q = Record<string, never>>(
       }
       const auth = await sessionFromRequest(req, options.touch ?? true);
       if (options.auth && !auth) throw new HttpError(401, "Please log in.");
-      void allowRequest; // VULN-10: no rate limit
+      if (options.limit && auth && !allowRequest(auth.userId)) {
+        await logEvent("RATE_LIMITED", { userId: auth.userId, ip, detail: req.nextUrl.pathname });
+        throw new HttpError(429, "Too many requests. Please wait a minute.");
+      }
       const query = parse((options.query ?? NO_QUERY) as ZodType<Q>, Object.fromEntries(req.nextUrl.searchParams));
       const body = options.body ? parse(options.body, await readJson(req)) : (undefined as B);
       const params = segment ? await segment.params : {};
