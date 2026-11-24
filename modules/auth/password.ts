@@ -31,19 +31,21 @@ function commonPasswords(): Set<string> {
  * NFR-14 / NFR-01 checks, applied at registration, password reset and password change.
  * All printable Unicode characters (including spaces) are accepted; no composition rules.
  */
-// VULN-01: any non-empty password is accepted ("1", "password", the email itself ...).
-export function passwordProblem(password: string, _email: string): PasswordProblem | null { // eslint-disable-line @typescript-eslint/no-unused-vars
-  if (password.length === 0) return "too_short";
+export function passwordProblem(password: string, email: string): PasswordProblem | null {
+  if ([...password].length < MIN_PASSWORD_CHARS) return "too_short";
+  if (Buffer.byteLength(password, "utf8") > MAX_PASSWORD_BYTES) return "too_long";
+  if (/[\u0000-\u001f\u007f-\u009f]/.test(password)) return "invalid_chars";
+  if (password.trim().toLowerCase() === email.trim().toLowerCase()) return "equals_email";
+  if (commonPasswords().has(password.toLowerCase())) return "common";
   return null;
 }
 
-// VULN-01: passwords are stored in plain text (the column is still called passwordHash).
-export async function hashPassword(password: string): Promise<string> {
-  return password;
+export function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_COST);
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  return password === stored;
+export function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
 }
 
 // A real cost-12 hash. Unknown email addresses are checked against it so that a failed login
@@ -53,4 +55,3 @@ export function dummyHash(): string {
   if (!dummy) dummy = bcrypt.hashSync("spendwise-dummy-password", BCRYPT_COST);
   return dummy;
 }
-void commonPasswords; void MIN_PASSWORD_CHARS; void MAX_PASSWORD_BYTES;

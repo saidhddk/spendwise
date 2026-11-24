@@ -29,7 +29,7 @@ export default function RegisterForm({ t }: { t: Dictionary }) {
       </label>
       <label className="block space-y-1">
         <span className="font-medium">{t.login.password}</span>
-        <input name="password" type="password" autoComplete="new-password" required />
+        <input name="password" type="password" autoComplete="new-password" required minLength={8} />
         <span className="text-muted">{t.register.passwordHelp}</span>
       </label>
       <Message text={error} kind="error" />

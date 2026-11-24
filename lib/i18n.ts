@@ -23,7 +23,7 @@ const en = {
     title: "Create your account",
     submit: "Create account",
     have: "Already have an account?",
-    passwordHelp: "Any password.",
+    passwordHelp: "At least 8 characters. Spaces and any language are fine.",
   },
   confirm: { title: "Confirm your account", button: "Confirm my account", login: "Go to log in" },
   reset: {

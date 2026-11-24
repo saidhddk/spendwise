@@ -39,7 +39,7 @@ export default function SettingsView({ t, email }: { t: Dictionary; email: strin
           </label>
           <label className="space-y-1">
             <span className="font-medium">{t.settings.newPassword}</span>
-            <input name="next" type="password" autoComplete="new-password" required />
+            <input name="next" type="password" autoComplete="new-password" required minLength={8} />
           </label>
           <div className="sm:col-span-2 space-y-2">
             <Message text={pw?.text ?? null} kind={pw?.ok ? "info" : "error"} />
