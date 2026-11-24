@@ -33,13 +33,13 @@ export function present(t: Row) {
  * FR-11: the record must belong to the logged-in user. Someone else's record and a missing
  * record get the same 404; a refused access to another user's record is logged (NFR-15).
  */
-// VULN-06 (IDOR): the record is looked up by its ID only. Any logged-in user can read, edit or
-// delete any transaction whose ID they know.
-async function ownTransaction(_userId: string, id: string, _ip: string) { // eslint-disable-line @typescript-eslint/no-unused-vars
+async function ownTransaction(userId: string, id: string, ip: string) {
   if (!idParam.safeParse(id).success) throw notFound(); // FR-12: the id in the URL must be a UUID
-  const found = await db.transaction.findUnique({ where: { id }, include: { category: true } });
-  if (!found) throw notFound();
-  return found;
+  const own = await db.transaction.findFirst({ where: { id, userId }, include: { category: true } });
+  if (own) return own;
+  const exists = await db.transaction.findUnique({ where: { id }, select: { id: true } });
+  if (exists) await logEvent("ACCESS_REFUSED", { userId, ip, detail: `transaction ${id}` });
+  throw notFound();
 }
 
 async function checkCategory(userId: string, categoryId: string) {
