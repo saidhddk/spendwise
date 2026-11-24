@@ -8,13 +8,12 @@ import { randomToken, sha256 } from "@/lib/crypto";
 export const SESSION_COOKIE = "sw_session";
 export const PENDING_COOKIE = "sw_pending"; // binds an email code to one login attempt (NFR-19)
 export const IDLE_MS = 15 * 60_000; // 15 minutes without activity
-export const ABSOLUTE_MS = 8 * 60 * 60_000; // not enforced (VULN-04)
+export const ABSOLUTE_MS = 8 * 60 * 60_000; // 8 hours after login
 
 export type AuthContext = { userId: string; email: string; sessionHash: string };
 
-// VULN-04: sessions never expire.
-export function sessionExpired(_s: { createdAt: Date; lastSeenAt: Date }, _now = new Date()): boolean { // eslint-disable-line @typescript-eslint/no-unused-vars
-  return false;
+export function sessionExpired(s: { createdAt: Date; lastSeenAt: Date }, now = new Date()): boolean {
+  return now.getTime() - s.lastSeenAt.getTime() > IDLE_MS || now.getTime() - s.createdAt.getTime() > ABSOLUTE_MS;
 }
 
 /** Always a new identifier, created on the server after login (FR-02: no session fixation). */
@@ -42,13 +41,12 @@ export function sessionFromRequest(req: NextRequest, touch = true): Promise<Auth
 }
 
 export function setSessionCookie(res: NextResponse, value: string): void {
-  // VULN-04: JavaScript can read the cookie (so XSS can steal it) and it is sent on cross-site requests (CSRF).
   res.cookies.set(SESSION_COOKIE, value, {
-    httpOnly: false,
-    secure: true, // browsers accept Secure cookies on http://localhost
-    sameSite: "none",
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
     path: "/",
-    maxAge: 365 * 24 * 60 * 60,
+    maxAge: ABSOLUTE_MS / 1000,
   });
 }
 
