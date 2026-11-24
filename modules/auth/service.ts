@@ -229,8 +229,8 @@ export async function changePassword(
   ip: string,
   deviceCookie: string | undefined,
 ): Promise<ChangeResult> {
-  // VULN-08: the current password is not checked, so a forged request (CSRF) or a stolen session can change it.
-  void checkPasswordAgain; void current; void deviceCookie;
+  const check = await checkPasswordAgain(auth, current, ip, deviceCookie);
+  if (check !== "ok") return { kind: check };
   const problem = passwordProblem(next, auth.email);
   if (problem) return { kind: "problem", problem };
   await db.user.update({ where: { id: auth.userId }, data: { passwordHash: await hashPassword(next) } });

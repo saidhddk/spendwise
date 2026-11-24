@@ -7,7 +7,7 @@ import { LOCKED_MESSAGE } from "@/modules/auth/throttle";
 
 export const POST = api({ auth: true, body: changePasswordBody }, async ({ req, auth, body, ip }) => {
   const device = req.cookies.get(DEVICE_COOKIE)?.value;
-  const result = await changePassword(auth, body.currentPassword ?? "", body.newPassword, ip, device);
+  const result = await changePassword(auth, body.currentPassword, body.newPassword, ip, device);
   if (result.kind === "locked") return json({ error: LOCKED_MESSAGE }, 429);
   if (result.kind === "wrong") return json({ error: "Invalid input.", fields: { currentPassword: "Your current password is not correct." } }, 400);
   if (result.kind === "problem") {
