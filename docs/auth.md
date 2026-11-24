@@ -27,3 +27,10 @@ To run the attacks again: `APP_BASE_URL=http://localhost:3100 npx next dev -H 12
 There's no second factor, so someone who knows a user's password can log in. I accept this for now because the app holds expense records, not payments. The planned email code for a new browser (FR-18) needs a mail service that this course version doesn't have.
 
 I don't accept these three; they're still open in this teaching copy and are my next fixes (from my Deliverable 7 worksheet): password reset without email (VULN-14), plain-text passwords (VULN-01), and a session cookie that isn't HttpOnly, is SameSite=None and never expires (VULN-04).
+
+## Update after Secure Implementation II (24 November 2026)
+
+All three are fixed: VULN-14 (edd1474), VULN-01 (fb2a97f), VULN-04 (5ac43a9), together with the other open
+items (see `VULNERABILITIES.md`). The residual risk above is smaller now: a password alone no longer opens
+the account from a new browser, because the emailed 6-digit code (FR-18) is back. Since then the Part C
+script passes that code step once per run and still reports that all station 2 attacks fail.

@@ -1,11 +1,15 @@
-# SpendWise – intentionally vulnerable version (answer key)
+# SpendWise – vulnerabilities and fixes (answer key)
 
-This copy of SpendWise has security holes on purpose, for pentesting practice in CS424.
-It only listens on 127.0.0.1. Never deploy it or expose it to a network.
-The secure version is archived in `~/spendwise_SECURE_backup_2026-10-27.tar.gz`.
+For pentesting practice in CS424, SpendWise was given 15 security holes on purpose (27 Oct 2026).
+They were fixed in two rounds: D6 (input and output) and Secure Implementation II (authentication,
+sessions, access control, platform). **All 15 are fixed.** The table below is the original list;
+the two tables after it give the fix and the commit for each one.
+A fully vulnerable copy for pentest demos stays outside the repository (`~/Desktop/SpendWise/unsecure`).
 
 Run: `npm run dev`, then open http://localhost:3000 (use `localhost`, the session cookie is `Secure`).
-Database: `prisma/vuln.db`. Demo accounts: `mariem@test.tn` / `123`, `amine@test.tn` / `amine`.
+Database: `prisma/vuln.db` (name kept from the vulnerable phase). Demo accounts: `mariem@test.tn` / `123`,
+`amine@test.tn` / `amine` (now stored as bcrypt hashes; new passwords must follow NFR-14).
+Development emails (confirmation links, login codes, reset links) are written to `data/outbox.jsonl`.
 
 | ID | Vulnerability | Where | How to show it |
 |---|---|---|---|
@@ -25,7 +29,7 @@ Database: `prisma/vuln.db`. Demo accounts: `mariem@test.tn` / `123`, `amine@test
 | VULN-14 | Password reset without any email step | `modules/auth/service.ts` (`resetWithoutEmail`), `/reset` page | Set a new password for any known address |
 | VULN-15 | SQL injection in the login (email and password pasted into the SQL string; email format not checked) | `modules/auth/service.ts` (`login`), `modules/auth/schemas.ts` (`loginBody`) | Type a single quote `'` in the email field: the login answers with an SQL error |
 
-Account deletion and CSV export also have no email step any more (export needs only the session).
+In the vulnerable phase, account deletion and CSV export had no email step either (fixed in edd1474).
 
 ## Fixed in D6 (Secure Implementation I: input and output)
 
@@ -36,5 +40,20 @@ Account deletion and CSV export also have no email step any more (export needs o
 | VULN-13 | Note rendered as React text, lint rule against `dangerouslySetInnerHTML` | e88587d |
 | VULN-07 | Origin check on every POST, PUT, PATCH and DELETE (403 + `CSRF_REJECTED` log) | e18a1c2 |
 
-Still open on purpose (later deliverables): VULN-01, 02, 03, 04, 06, 08, 10, 11, 14.
 Screenshots of each attack before and after its fix: `evidence/d6/`.
+
+## Fixed in Secure Implementation II (authentication, sessions, access control, platform)
+
+| ID | Fix | Commit |
+|---|---|---|
+| VULN-01 | bcrypt cost 12 and NFR-14 password rules; `scripts/hash-plaintext-passwords.ts` hashed the stored plain-text passwords | fb2a97f |
+| VULN-04 | Session cookie HttpOnly, SameSite=Lax, 8-hour Max-Age; session ends after 15 min idle or 8 h | 5ac43a9 |
+| VULN-02, VULN-03 | Same answer for known and unknown addresses (and the same bcrypt time); confirmation link for new accounts; throttling per address, known browser and IP; emailed code for a new browser | 39d62ec |
+| VULN-08 | Password change needs the current password | c123030 |
+| VULN-14 | Reset only through a single-use 30-minute emailed link; deletion and export need their emailed link/code again | edd1474 |
+| VULN-06 | Transactions looked up by ID and owner; another user's record gets 404 and is logged | 34e05b5 |
+| VULN-10 | 60 requests per minute per user on the data endpoints, then 429 | 0374ee3 |
+| VULN-11 | CSP with a per-request nonce, X-Frame-Options DENY, HSTS, nosniff, no-referrer, no-store | 3bc121f |
+
+Proof: `npx tsx --env-file=.env scripts/secure-2-attacks.ts` replays each attack (39 checks, all PASS:
+`evidence/secure-2/attacks.txt`), and `npm test` runs 69 automated tests (all pass: `evidence/secure-2/tests.txt`).

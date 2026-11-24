@@ -1,0 +1,69 @@
+$ npx vitest run
+ RUN  v3.2.7 /Users/saidhdk/spendwise
+NFR-18 login: median registered 262.0 ms, unregistered 261.7 ms, difference 0.2 ms
+NFR-18 registration: median registered 261.0 ms, unregistered 263.7 ms, difference 2.7 ms
+NFR-18 password reset: median registered 0.4 ms, unregistered 0.2 ms, difference 0.2 ms
+ ✓ tests/timing.test.ts (1 test) 55799ms
+   ✓ NFR-18 no timing difference between registered and unregistered addresses > login, registration and reset  55798ms
+ ✓ tests/auth.login.test.ts (15 tests) 21087ms
+   ✓ FR-02 login > shows the same message for an unknown address and for a wrong password  1057ms
+   ✓ FR-02 login > issues a new session identifier at login; one from before login stops working  798ms
+   ✓ FR-18 new-device email code > asks an unknown browser for a code only after the correct password  784ms
+   ✓ FR-18 new-device email code > a wrong code is refused and counted as a failed login; the right code starts the session  793ms
+   ✓ FR-18 new-device email code > NFR-19: a code dies after 5 wrong entries and when a newer code is sent  1064ms
+   ✓ FR-03 / NFR-09 sessions > logout deletes the session on the server: the old cookie no longer works  533ms
+   ✓ FR-03 / NFR-09 sessions > the session cookie is random, HttpOnly, Secure and SameSite; the server keeps only its hash  526ms
+   ✓ FR-03 / NFR-09 sessions > ends a session after 15 idle minutes and 8 hours after login  530ms
+   ✓ NFR-13 login throttling > refuses an address for 15 minutes after 5 failures, even with the right password  1841ms
+   ✓ NFR-13 login throttling > applies the same limit and message to an unknown address  2880ms
+   ✓ NFR-13 login throttling > a known browser still gets in during the lockout (no lock-out abuse) ...  2135ms
+   ✓ NFR-13 login throttling > ... but after STRIDE: a known browser is itself refused after 10 failures in 15 minutes  3158ms
+   ✓ NFR-13 login throttling > refuses an IP for 1 hour after failures for more than 10 different addresses  3393ms
+   ✓ NFR-13 login throttling > over 100 failures in 10 minutes alerts the administrator and requires the code for every login  1059ms
+   ✓ NFR-09 after STRIDE: the page learns when the session has ended > the status check does not extend the session and reports 401 once it has ended  535ms
+ ✓ tests/transactions.test.ts (17 tests) 12521ms
+   ✓ FR-04 / FR-06 / FR-07 own transactions > creates a transaction owned by the logged-in user, with a random UUID v4  544ms
+   ✓ FR-04 / FR-06 / FR-07 own transactions > refuses a userId, id or createdAt field instead of using it  1072ms
+   ✓ FR-04 / FR-06 / FR-07 own transactions > edits and deletes own transactions; an edit can never change the owner  1065ms
+   ✓ FR-04 / FR-06 / FR-07 own transactions > stores at most 50,000 transactions per user  1697ms
+   ✓ FR-11 per-user isolation (Amine's IDOR attack, MS-03) > another user's record gets the same 404 as a record that does not exist, and the refusal is logged  1116ms
+   ✓ FR-11 per-user isolation (Amine's IDOR attack, MS-03) > a custom category can be used only by the user who created it  1076ms
+   ✓ FR-12 server-side validation > amount: > 0, <= 10,000,000, at most 3 decimals; no NaN, Infinity, exponent or JSON number  536ms
+   ✓ FR-12 server-side validation > type, date (2000-01-01 .. today, Tunis time) and category  531ms
+   ✓ FR-12 server-side validation > note: at most 200 Unicode characters, no control characters except line breaks  538ms
+   ✓ FR-12 server-side validation > refuses request bodies over 10 KB and malformed JSON  531ms
+   ✓ FR-05 / FR-15 / NFR-03 lists and filters > pages hold at most 100 items; larger page sizes are refused  536ms
+   ✓ FR-05 / FR-15 / NFR-03 lists and filters > filters by month, category and type; sort fields come from an allow-list; unknown parameters are refused  538ms
+   ✓ FR-05 / FR-15 / NFR-03 lists and filters > D6: the note search is a bound parameter; SQL in it finds nothing and leaks nothing  1067ms
+   ✓ NFR-16 rate limit and NFR-15 security log > the 61st request in a minute gets HTTP 429 and is logged  569ms
+   ✓ NFR-16 rate limit and NFR-15 security log > STRIDE: creating, editing and deleting a transaction is logged with its UUID only  540ms
+   ✓ NFR-16 rate limit and NFR-15 security log > removes CR and LF from user-supplied values and alerts the admin after 20 refused requests in 10 minutes  544ms
+ ✓ tests/auth.account.test.ts (8 tests) 6654ms
+   ✓ FR-13 password reset > shows the same message whether or not the address is registered  542ms
+   ✓ FR-13 password reset > single-use 30-minute link; a new link voids the old one; reset ends sessions and known browsers  821ms
+   ✓ FR-13 password reset > NFR-19: links use the fixed base URL even if the Host headers are forged  532ms
+   ✓ FR-13 password reset > NFR-20: at most 3 emails per address per hour; the page keeps its usual message  532ms
+   ✓ FR-19 / FR-20 account security > FR-19: one action ends every other session  793ms
+   ✓ FR-19 / FR-20 account security > FR-20: needs the current password, applies NFR-14, ends other sessions and sends a notice  1840ms
+   ✓ FR-17 account deletion > wrong passwords count as failed logins  790ms
+   ✓ FR-17 account deletion > password + emailed link delete the account and all its data, end sessions, and survive a restore  804ms
+ ✓ tests/categories.dashboard.export.test.ts (8 tests) 4576ms
+   ✓ FR-09 / FR-10 categories > lists the predefined categories, read-only for everyone  543ms
+   ✓ FR-09 / FR-10 categories > custom names: 1-30 characters after trimming, no control characters, unique ignoring case (also vs predefined)  537ms
+   ✓ FR-09 / FR-10 categories > at most 50 custom categories per user  540ms
+   ✓ FR-08 / FR-14 dashboard > shows this month's income, expenses, balance and spending per category - for the user's own data only  1065ms
+   ✓ FR-08 / FR-14 dashboard > shows any previous month; months outside 2000-01..now are refused  533ms
+   ✓ FR-08 / FR-14 dashboard > NFR-05: the dashboard for a user with 1,000 transactions is computed in well under 2 seconds  552ms
+   ✓ FR-16 CSV export > needs the emailed 6-digit code, bound to this session; sends a no-store attachment  803ms
+ ✓ tests/platform.test.ts (12 tests) 2311ms
+   ✓ NFR-02 CSRF > refuses state-changing requests without our Origin, and logs them  542ms
+   ✓ NFR-04 / NFR-10 / NFR-21 response headers (proxy.ts) > API responses carry Cache-Control: no-store  531ms
+   ✓ NFR-03 / NFR-04 lint rules > the build fails on $queryRawUnsafe, $executeRawUnsafe and dangerouslySetInnerHTML  1174ms
+ ✓ tests/auth.register.test.ts (8 tests) 2160ms
+   ✓ FR-01 registration > gives the same answer for a registered address, creates no second account and notifies the owner  526ms
+   ✓ FR-01 registration > only a confirmed account can log in; the link is single-use and starts no session  532ms
+   ✓ NFR-14 / NFR-01 password rules > accepts long Unicode passwords with spaces and no composition rules  528ms
+ Test Files  7 passed (7)
+      Tests  69 passed (69)
+   Start at  11:07:40
+   Duration  107.56s (transform 171ms, setup 18ms, collect 744ms, tests 105.11s, environment 0ms, prepare 206ms)

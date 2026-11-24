@@ -1,0 +1,62 @@
+SpendWise http://localhost:3100, 2026-11-24T10:02:12.760Z
+
+VULN-11: security headers
+PASS  Content-Security-Policy with a per-request nonce for scripts
+PASS  page cannot be framed (frame-ancestors 'none' + X-Frame-Options: DENY)
+PASS  HSTS and X-Content-Type-Options: nosniff are sent
+PASS  Cache-Control: no-store
+
+VULN-01: weak and plain-text passwords
+PASS  register with password "1" -> 400 too_short
+PASS  register with password "password" -> 400 common
+PASS  register with password "weak-mwuizs7s@test.tn" -> 400 equals_email
+PASS  two new accounts created and confirmed through the emailed link
+PASS  password stored as a bcrypt cost-12 hash ($2b$12$…), not as text
+PASS  accounts with a plain-text password in the database: 0
+
+VULN-02: user enumeration
+PASS  register: new and existing address get the same answer (200 "Check your inbox: we sent you an email to finish creating your account.")
+PASS  login: unknown address and wrong password get the same answer (401 "Email or password is incorrect.")
+PASS  similar time: unknown address 273 ms, wrong password 267 ms (both run bcrypt)
+
+VULN-03 (part 1) + VULN-04: login from a new browser, session cookie
+PASS  correct password from a new browser gives NO session, only an emailed code
+PASS  after the 6-digit code: session RXwXjQ… (43 chars)
+PASS  session cookie is HttpOnly (JavaScript and XSS cannot read it)
+PASS  session cookie is SameSite=Lax and Secure
+PASS  session cookie lives 8 hours (Max-Age=28800), not 1 year
+
+VULN-06: IDOR on transactions
+PASS  A creates transaction b02e9ac7…
+PASS  B: GET A's transaction -> 404
+PASS  B: PUT A's transaction -> 404
+PASS  B: DELETE A's transaction -> 404
+PASS  A's transaction is unchanged and still there
+PASS  the 3 refused attempts are in the security log (ACCESS_REFUSED: 3)
+
+VULN-04: sessions expire
+PASS  known browser (device cookie) logs in without a code
+PASS  session idle for 16 minutes -> 401
+PASS  the expired session row is deleted
+
+VULN-08: password change needs the current password
+PASS  without the current password -> 400
+PASS  with a wrong current password -> 400 "Your current password is not correct."
+PASS  with the right current password -> 200 (the owner can still change it)
+
+VULN-10: API rate limit
+PASS  burst of requests: 57 accepted, then 429 at request 58 (limit 60 per minute)
+
+VULN-14: password reset
+PASS  setting a new password straight from the reset form -> 400
+PASS  same answer for a registered and an unknown address ("If this address has an account, we sent it a link to reset the password.")
+PASS  the reset link went only to the owner's inbox (token kPoIrv… (43 chars))
+PASS  the owner sets a new password with the link -> 200
+PASS  the same link used again -> 400 (single use)
+PASS  B's old session ended with the reset
+
+VULN-03 (part 2): password guessing
+PASS  5 wrong guesses (401, 401, 401, 401, 401), then even the RIGHT password -> 429 "Too many attempts. Please try again in 15 minutes."
+PASS  an unknown address is locked the same way (no hint that it does not exist)
+
+ALL ATTACKS FAILED against SpendWise (good)

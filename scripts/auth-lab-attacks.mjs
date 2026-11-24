@@ -1,10 +1,16 @@
 // Auth lab, Part C: replay the Station 2 (sessions) attacks from the lab against SpendWise.
 // Each check prints PASS when the attack FAILS against our code. Cookie values are shortened.
 // usage: node scripts/auth-lab-attacks.mjs [base URL, default http://localhost:3100] [email] [password]
+// Since Secure Implementation II a new browser needs the emailed code (FR-18): the script passes it
+// once, reading the development email from MAIL_OUTBOX, and then logs in as that known browser.
+import { readFile } from "node:fs/promises";
+
 const BASE = process.argv[2] ?? "http://localhost:3100";
 const EMAIL = process.argv[3] ?? "mariem@test.tn";
 const PASSWORD = process.argv[4] ?? "123";
 const COOKIE = "sw_session";
+const OUTBOX = process.env.MAIL_OUTBOX ?? "./data/outbox.jsonl";
+let device = null; // sw_device of this script's browser once it passed the email code
 
 let failures = 0;
 const short = (v) => (!v ? "(none)" : v.length <= 16 ? `"${v}"` : `${v.slice(0, 6)}… (${v.length} chars)`);
@@ -14,18 +20,35 @@ function check(ok, text) {
 }
 
 /** POST from our own page (the Origin check of NFR-02 refuses anything else). */
-async function post(path, body, cookie) {
+async function post(path, body, cookie, extra) {
   const headers = { Origin: new URL(BASE).origin, "Content-Type": "application/json" };
-  if (cookie) headers.Cookie = `${COOKIE}=${cookie}`;
+  const jar = [cookie && `${COOKIE}=${cookie}`, device && `sw_device=${device}`, extra].filter(Boolean).join("; ");
+  if (jar) headers.Cookie = jar;
   return fetch(BASE + path, { method: "POST", headers, body: JSON.stringify(body ?? {}) });
 }
 
-function sessionFrom(res) {
+function cookieFrom(res, name) {
   for (const c of res.headers.getSetCookie()) {
-    const m = c.match(new RegExp(`^${COOKIE}=([^;]*)`));
+    const m = c.match(new RegExp(`^${name}=([^;]*)`));
     if (m) return m[1];
   }
   return null;
+}
+const sessionFrom = (res) => cookieFrom(res, COOKIE);
+
+/** Once per run: password, then the emailed 6-digit code, so this browser becomes known. */
+async function knownBrowser() {
+  const since = new Date().toISOString();
+  const pending = cookieFrom(await post("/api/auth/login", { email: EMAIL, password: PASSWORD }), "sw_pending");
+  let code = null;
+  for (let i = 0; i < 20 && !code; i++) {
+    await new Promise((r) => setTimeout(r, 150));
+    const mails = (await readFile(OUTBOX, "utf8")).split("\n").filter(Boolean).map((l) => JSON.parse(l));
+    code = mails.filter((m) => m.to === EMAIL && m.at >= since).map((m) => m.text.match(/login code is (\d{6})/)?.[1]).findLast(Boolean);
+  }
+  const done = await post("/api/auth/login/code", { code }, null, `sw_pending=${pending}`);
+  device = cookieFrom(done, "sw_device");
+  await post("/api/auth/logout", {}, sessionFrom(done));
 }
 
 async function me(cookie) {
@@ -40,6 +63,7 @@ async function login(cookie) {
 }
 
 console.log(`SpendWise ${BASE}, user ${EMAIL}, ${new Date().toISOString()}\n`);
+await knownBrowser();
 
 console.log("Break 2a: guess another user's session ID (lab: the IDs were a counter, admin = 1000)");
 const a = await login();

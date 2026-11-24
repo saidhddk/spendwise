@@ -2,12 +2,13 @@
   "name": "spendwise",
   "version": "1.0.0",
   "private": true,
-  "description": "SpendWise - INTENTIONALLY VULNERABLE expense tracker for pentesting practice (CS424). Do not deploy.",
+  "description": "SpendWise - secure personal expense tracker (CS424 Secure Software Development)",
   "scripts": {
     "dev": "next dev -H 127.0.0.1 -p 3000",
     "build": "eslint . && next build",
     "start": "next start -H 127.0.0.1 -p 3000",
     "lint": "eslint .",
+    "test": "vitest run",
     "db:migrate": "prisma migrate deploy",
     "db:reset": "prisma migrate reset --force --skip-seed"
   },
