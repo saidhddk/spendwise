@@ -37,7 +37,7 @@ export default function LoginForm({ t, expired }: { t: Dictionary; expired: bool
           <h1 className="text-2xl font-bold">{t.login.title}</h1>
           <label className="block space-y-1">
             <span className="font-medium">{t.login.email}</span>
-            <input name="email" type="text" autoComplete="email" required maxLength={254} />
+            <input name="email" type="email" autoComplete="email" required maxLength={254} />
           </label>
           <label className="block space-y-1">
             <span className="font-medium">{t.login.password}</span>

@@ -4,10 +4,10 @@ import { register } from "@/modules/auth/service";
 import { PASSWORD_MESSAGES } from "@/modules/auth/password";
 
 export const POST = api({ body: registerBody }, async ({ body, ip }) => {
-  const { problem, exists } = await register(body.email, body.password, ip);
-  if (exists) return json({ error: "This email address is already registered." }, 409);
+  const { problem } = await register(body.email, body.password, ip);
   if (problem) {
     return json({ error: "Invalid input.", fields: { password: PASSWORD_MESSAGES[problem] }, problem }, 400);
   }
-  return json({ message: "Account created. You can log in now." });
+  // FR-01: the same answer whether or not the address is already registered.
+  return json({ message: "Check your inbox: we sent you an email to finish creating your account." });
 });

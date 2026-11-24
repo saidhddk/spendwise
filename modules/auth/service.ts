@@ -28,18 +28,10 @@ export async function purgeUnconfirmed(now = Date.now()): Promise<number> {
  * FR-01: the caller always shows the same message. A new address gets a confirmation link;
  * an address that is already registered gets a notice instead and no second account is made.
  */
-export async function register(email: string, password: string, ip: string): Promise<{ problem?: PasswordProblem; exists?: boolean }> {
+export async function register(email: string, password: string, ip: string): Promise<{ problem?: PasswordProblem }> {
   const problem = passwordProblem(password, email);
   if (problem) return { problem };
-  const existing = await db.user.findUnique({ where: { email } });
-  // VULN-02: tells anyone whether an address is registered, and the account works at once (no email link).
-  if (existing) return { exists: true };
-  const user = await db.user.create({ data: { email, passwordHash: await hashPassword(password), confirmedAt: new Date() } });
-  await logEvent("REGISTERED", { userId: user.id, ip });
-  return {};
-}
-
-export async function registerWithEmailLink(email: string, password: string, ip: string): Promise<{ problem?: PasswordProblem }> {
+  await purgeUnconfirmed();
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
     await hashPassword(password); // same bcrypt work as a new registration (NFR-18)
@@ -77,7 +69,6 @@ export async function confirmAccount(token: string, ip: string): Promise<boolean
 export type LoginResult =
   | { kind: "locked" }
   | { kind: "failed" }
-  | { kind: "no_account" }
   | { kind: "unconfirmed" }
   | { kind: "code"; pending: string }
   | { kind: "session"; session: string };
@@ -89,29 +80,31 @@ export async function login(
   deviceCookie: string | undefined,
   userAgent: string,
 ): Promise<LoginResult> {
-  // VULN-03: no lockout, no limit and no email code: unlimited password guessing.
-  void deviceCookie; void userAgent;
-  // NFR-03: Prisma sends the email as a bound parameter; the password is compared in code, never in SQL.
-  const user = await db.user.findUnique({ where: { email } });
-  // VULN-02: an unknown address and a wrong password get different answers.
-  if (!user) return { kind: "no_account" };
-  if (!(await verifyPassword(password, user.passwordHash))) {
-    await logEvent("LOGIN_FAILED", { userId: user.id, ip });
-    return { kind: "failed" };
-  }
-  await logEvent("LOGIN_SUCCESS", { userId: user.id, ip });
-  return { kind: "session", session: await createSession(user.id) };
-}
-
-export async function loginWithEmailCode(email: string, ip: string, deviceCookie: string | undefined, userAgent: string): Promise<LoginResult> {
-  const user = await db.user.findUniqueOrThrow({ where: { email } });
   const emailKey = keyedHash(email);
   const deviceKey = deviceKeyOf(deviceCookie);
-  const knownDevice = await isKnownDevice(user.id, deviceCookie);
-  if (await loginRefused({ emailKey, ip, deviceKey, knownDevice })) return { kind: "locked" };
-  if (knownDevice && !(await stuffingInProgress())) return { kind: "session", session: await createSession(user.id) };
-  await recordFailure({ emailKey, ip, deviceKey });
-  void dummyHash;
+  const user = await db.user.findUnique({ where: { email } });
+  const knownDevice = user ? await isKnownDevice(user.id, deviceCookie) : false;
+
+  // NFR-13: same limit for registered and unknown addresses, checked before the password.
+  if (await loginRefused({ emailKey, ip, deviceKey, knownDevice })) {
+    await logEvent("LOGIN_BLOCKED", { userId: user?.id, ip });
+    return { kind: "locked" };
+  }
+
+  // NFR-18: an unknown address is still checked against a real bcrypt hash.
+  const passwordOk = await verifyPassword(password, user?.passwordHash ?? dummyHash());
+  if (!user || !passwordOk) {
+    await recordFailure({ emailKey, ip, deviceKey });
+    await logEvent("LOGIN_FAILED", { userId: user?.id, ip });
+    return { kind: "failed" };
+  }
+  if (!user.confirmedAt) return { kind: "unconfirmed" };
+
+  // NFR-13: during a credential-stuffing wave every login needs the email code.
+  if (knownDevice && !(await stuffingInProgress())) {
+    await logEvent("LOGIN_SUCCESS", { userId: user.id, ip });
+    return { kind: "session", session: await createSession(user.id) };
+  }
 
   // FR-18: unknown browser -> 6-digit code by email, only after the correct password.
   const pending = randomToken(); // binds the code to this login attempt (NFR-19)

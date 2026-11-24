@@ -11,8 +11,7 @@ export const POST = api({ body: loginBody }, async ({ req, body, ip }) => {
   const result = await login(body.email, body.password, ip, device, req.headers.get("user-agent") ?? "");
   if (result.kind === "locked") return json({ error: LOCKED_MESSAGE }, 429);
   // FR-02: one message for an unknown address and for a wrong password.
-  if (result.kind === "no_account") return json({ error: "No account uses this email address." }, 404);
-  if (result.kind === "failed") return json({ error: "Wrong password for this account." }, 401);
+  if (result.kind === "failed") return json({ error: "Email or password is incorrect." }, 401);
   if (result.kind === "unconfirmed") {
     return json({ error: "Please confirm your email address first: open the link we sent you." }, 403);
   }
