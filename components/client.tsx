@@ -49,6 +49,19 @@ export function Button({ children, kind = "primary", ...props }: React.ButtonHTM
   );
 }
 
+/** Password field with a Show/Hide button. Hidden by default; only the user's click reveals it. */
+export function PasswordInput({ show, hide, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { show: string; hide: string }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span className="relative block">
+      <input {...props} type={visible ? "text" : "password"} style={{ paddingInlineEnd: "6rem" }} />
+      <button type="button" aria-pressed={visible} onClick={() => setVisible(!visible)} className="absolute inset-y-0 end-0 px-3 text-sm font-semibold text-brand">
+        {visible ? hide : show}
+      </button>
+    </span>
+  );
+}
+
 export function LanguageSwitch({ label, to }: { label: string; to: "en" | "fr" }) {
   return (
     <button

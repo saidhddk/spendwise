@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Button, Message, callApi, errorText, type ApiResult } from "@/components/client";
+import { Button, Message, callApi, errorText, PasswordInput, type ApiResult } from "@/components/client";
 import type { Dictionary } from "@/lib/i18n";
 
 type Note = { text: string; ok: boolean } | null;
@@ -41,11 +41,11 @@ export default function SettingsView({ t, email }: { t: Dictionary; email: strin
         <form className="grid gap-3 sm:grid-cols-2" action={async (f) => setPw(note(await callApi("/api/me/password", "POST", { currentPassword: f.get("current"), newPassword: f.get("next") })))}>
           <label className="space-y-1">
             <span className="font-medium">{t.settings.current}</span>
-            <input name="current" type="password" autoComplete="current-password" required />
+            <PasswordInput name="current" autoComplete="current-password" required show={t.login.show} hide={t.login.hide} />
           </label>
           <label className="space-y-1">
             <span className="font-medium">{t.settings.newPassword}</span>
-            <input name="next" type="password" autoComplete="new-password" required minLength={8} />
+            <PasswordInput name="next" autoComplete="new-password" required minLength={8} show={t.login.show} hide={t.login.hide} />
           </label>
           <div className="sm:col-span-2 space-y-2">
             <Message text={pw?.text ?? null} kind={pw?.ok ? "info" : "error"} />
@@ -83,7 +83,7 @@ export default function SettingsView({ t, email }: { t: Dictionary; email: strin
         <form className="flex flex-wrap items-end gap-3" action={async (f) => setDel(note(await callApi("/api/me/delete", "POST", { password: f.get("password") })))}>
           <label className="min-w-48 flex-1 space-y-1">
             <span className="font-medium">{t.login.password}</span>
-            <input name="password" type="password" autoComplete="current-password" required />
+            <PasswordInput name="password" autoComplete="current-password" required show={t.login.show} hide={t.login.hide} />
           </label>
           <Button type="submit" kind="danger">{t.settings.deleteButton}</Button>
         </form>

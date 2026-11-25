@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Message, callApi, errorText } from "@/components/client";
+import { Button, Message, callApi, errorText, PasswordInput } from "@/components/client";
 import type { Dictionary } from "@/lib/i18n";
 
 export default function ResetForms({ t, token }: { t: Dictionary; token?: string }) {
@@ -28,7 +28,7 @@ export default function ResetForms({ t, token }: { t: Dictionary; token?: string
       <h1 className="text-2xl font-bold">{t.reset.newTitle}</h1>
       <label className="block space-y-1">
         <span className="font-medium">{t.settings.newPassword}</span>
-        <input name="password" type="password" autoComplete="new-password" required minLength={8} />
+        <PasswordInput name="password" autoComplete="new-password" required minLength={8} show={t.login.show} hide={t.login.hide} />
         <span className="text-muted">{t.register.passwordHelp}</span>
       </label>
       <Message text={message?.text ?? null} kind="error" />

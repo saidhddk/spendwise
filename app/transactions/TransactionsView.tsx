@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, Message, callApi, errorText } from "@/components/client";
 import type { Dictionary } from "@/lib/i18n";
 
-type Category = { id: string; name: string; custom: boolean };
+type Category = { id: string; name: string; custom: boolean; kind: "income" | "expense" | "any" };
+type Kind = "income" | "expense";
 type Tx = { id: string; type: "income" | "expense"; amount: string; date: string; note: string | null; category: { id: string; name: string } };
 type Page = { items: Tx[]; page: number; pageSize: number; total: number };
 
@@ -21,6 +22,9 @@ export default function TransactionsView(props: {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<Page | null>(null);
   const [editing, setEditing] = useState<Tx | "new" | null>(props.openForm ? "new" : null);
+  const [formType, setFormType] = useState<Kind>("expense"); // the form only offers categories of this type
+  const [picked, setPicked] = useState<string | null>(null); // a category just created inside the form
+  const [newCat, setNewCat] = useState<string | null>(null); // the form's "new category" field; null = closed
   const [lastCategory, setLastCategory] = useState(props.lastCategoryId ?? categories[0]?.id ?? "");
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -53,12 +57,20 @@ export default function TransactionsView(props: {
     setLastCategory(String(body.category));
     setMessage({ ok: true, text: t.tx.saved });
     if (again) {
-      setEditing("new"); // FR-04: "Save and add another" opens an empty form (same date and category)
+      setEditing("new"); // FR-04: "Save and add another" opens an empty form (same date, type and category)
+      setFormType(body.type as Kind);
       setFormKey((k) => k + 1);
     } else {
       setEditing(null);
     }
     load();
+  }
+
+  function openForm(tx: Tx | "new") {
+    setEditing(tx);
+    setFormType(tx === "new" ? "expense" : tx.type);
+    setPicked(null);
+    setNewCat(null);
   }
 
   async function remove(tx: Tx) {
@@ -75,14 +87,27 @@ export default function TransactionsView(props: {
     setMessage({ ok: true, text: t.tx.saved });
   }
 
+  /** FR-10 from inside the form: the user types their own category (e.g. "Freelance") and it is selected. */
+  async function addCategoryInForm() {
+    const name = (newCat ?? "").trim();
+    if (!name) return;
+    const r = await callApi("/api/me/categories", "POST", { name });
+    if (!r.ok) return setMessage({ ok: false, text: errorText(r) });
+    setCategories([...categories, r.data]);
+    setPicked(r.data.id);
+    setNewCat(null);
+  }
+
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
   const current = editing && editing !== "new" ? editing : null;
+  const fitting = categories.filter((c) => c.kind === "any" || c.kind === formType || c.id === current?.category.id);
+  const formCategory = [picked, current?.category.id, lastCategory].find((id) => fitting.some((c) => c.id === id)) ?? fitting[0]?.id ?? "";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="me-auto text-2xl font-bold">{t.tx.title}</h1>
-        {!editing && <Button onClick={() => setEditing("new")}>{t.tx.add}</Button>}
+        {!editing && <Button onClick={() => openForm("new")}>{t.tx.add}</Button>}
       </div>
       <Message text={message?.text ?? null} kind={message?.ok ? "info" : "error"} />
 
@@ -95,19 +120,42 @@ export default function TransactionsView(props: {
           </label>
           <label className="space-y-1">
             <span className="font-medium">{t.tx.type}</span>
-            <select name="type" defaultValue={current?.type ?? "expense"}>
+            <select name="type" defaultValue={current?.type ?? formType} onChange={(e) => setFormType(e.target.value as Kind)}>
               <option value="expense">{t.tx.expense}</option>
               <option value="income">{t.tx.income}</option>
             </select>
           </label>
-          <label className="space-y-1">
-            <span className="font-medium">{t.tx.category}</span>
-            <select name="category" defaultValue={current?.category.id ?? lastCategory}>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </label>
+          <div className="space-y-1">
+            <label className="block space-y-1">
+              <span className="font-medium">{t.tx.category}</span>
+              <select key={`${formType}-${picked ?? ""}`} name="category" defaultValue={formCategory}>
+                {fitting.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </label>
+            {newCat === null ? (
+              <button type="button" className="text-brand underline" onClick={() => setNewCat("")}>{t.tx.newCategoryInForm}</button>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  aria-label={t.tx.newCategory}
+                  placeholder={t.tx.newCategory}
+                  maxLength={30}
+                  autoFocus
+                  value={newCat}
+                  onChange={(e) => setNewCat(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault(); // Enter adds the category instead of saving the transaction
+                      addCategoryInForm();
+                    }
+                  }}
+                />
+                <Button type="button" kind="secondary" onClick={addCategoryInForm}>{t.tx.addShort}</Button>
+              </div>
+            )}
+          </div>
           <label className="space-y-1">
             <span className="font-medium">{t.tx.date}</span>
             <input name="date" type="date" required min="2000-01-01" max={today} defaultValue={current?.date ?? today} />
@@ -152,7 +200,7 @@ export default function TransactionsView(props: {
             <span className={`ms-auto font-semibold tabular-nums ${tx.type === "income" ? "text-income" : "text-danger"}`}>
               {tx.type === "income" ? "+" : "−"}{tx.amount} TND
             </span>
-            <button type="button" className="text-brand underline" onClick={() => setEditing(tx)}>{t.tx.editButton}</button>
+            <button type="button" className="text-brand underline" onClick={() => openForm(tx)}>{t.tx.editButton}</button>
             <button type="button" className="text-danger underline" onClick={() => remove(tx)}>{t.tx.deleteButton}</button>
           </li>
         ))}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Button, Message, callApi, errorText } from "@/components/client";
+import { Button, Message, callApi, errorText, PasswordInput } from "@/components/client";
 import type { Dictionary } from "@/lib/i18n";
 
 export default function RegisterForm({ t }: { t: Dictionary }) {
@@ -29,7 +29,7 @@ export default function RegisterForm({ t }: { t: Dictionary }) {
       </label>
       <label className="block space-y-1">
         <span className="font-medium">{t.login.password}</span>
-        <input name="password" type="password" autoComplete="new-password" required minLength={8} />
+        <PasswordInput name="password" autoComplete="new-password" required minLength={8} show={t.login.show} hide={t.login.hide} />
         <span className="text-muted">{t.register.passwordHelp}</span>
       </label>
       <Message text={error} kind="error" />

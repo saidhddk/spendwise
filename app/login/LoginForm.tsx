@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Button, Message, callApi, errorText } from "@/components/client";
+import { Button, Message, callApi, errorText, PasswordInput } from "@/components/client";
 import type { Dictionary } from "@/lib/i18n";
 
 export default function LoginForm({ t, expired }: { t: Dictionary; expired: boolean }) {
@@ -41,7 +41,7 @@ export default function LoginForm({ t, expired }: { t: Dictionary; expired: bool
           </label>
           <label className="block space-y-1">
             <span className="font-medium">{t.login.password}</span>
-            <input name="password" type="password" autoComplete="current-password" required />
+            <PasswordInput name="password" autoComplete="current-password" required show={t.login.show} hide={t.login.hide} />
           </label>
           <Message text={error} kind="error" />
           <Button type="submit" disabled={busy} className="w-full">{t.login.submit}</Button>

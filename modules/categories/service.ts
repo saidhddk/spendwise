@@ -19,14 +19,21 @@ export const categoryBody = z.strictObject({
     .refine((s) => !CONTROL.test(s), "The name contains characters that are not allowed."),
 });
 
-export type CategoryView = { id: string; name: string; custom: boolean };
+/** Predefined categories meant for income; the other predefined ones are for expenses. */
+const INCOME_KEYS = new Set(["salary", "allowance", "other income"]);
+
+/** kind tells the form which type the category fits; a custom category fits both. */
+export type CategoryView = { id: string; name: string; custom: boolean; kind: "income" | "expense" | "any" };
+
+const kindOf = (userId: string | null, nameKey: string): CategoryView["kind"] =>
+  userId !== null ? "any" : INCOME_KEYS.has(nameKey) ? "income" : "expense";
 
 export async function listCategories(userId: string): Promise<CategoryView[]> {
   const rows = await db.category.findMany({
     where: { OR: [{ userId: null }, { userId }] },
     orderBy: [{ userId: "asc" }, { name: "asc" }],
   });
-  return rows.map((c) => ({ id: c.id, name: c.name, custom: c.userId !== null }));
+  return rows.map((c) => ({ id: c.id, name: c.name, custom: c.userId !== null, kind: kindOf(c.userId, c.nameKey) }));
 }
 
 /** A transaction may use a predefined category or one the same user created (FR-11, FR-12). */
@@ -48,5 +55,5 @@ export async function createCategory(userId: string, name: string, ip: string): 
   if (clash) throw new HttpError(400, "Invalid input.", { name: "You already have a category with this name." });
   const category = await db.category.create({ data: { userId, name, nameKey } });
   await logEvent("CATEGORY_CREATED", { userId, ip, detail: `category ${category.id}` });
-  return { id: category.id, name: category.name, custom: true };
+  return { id: category.id, name: category.name, custom: true, kind: "any" };
 }

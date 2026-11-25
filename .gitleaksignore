@@ -1,0 +1,7 @@
+# Reviewed gitleaks findings (false positives).
+# scripts/secure-2-attacks.ts creates throwaway test accounts (sw2-a/sw2-b-<random>@test.tn) on a local
+# development server; these are their made-up passwords, not real credentials.
+e9b7f9167e94b3f514a9e976428b67bddfe4e147:scripts/secure-2-attacks.ts:generic-api-key:16
+e9b7f9167e94b3f514a9e976428b67bddfe4e147:scripts/secure-2-attacks.ts:generic-api-key:157
+e9b7f9167e94b3f514a9e976428b67bddfe4e147:scripts/secure-2-attacks.ts:generic-api-key:170
+e9b7f9167e94b3f514a9e976428b67bddfe4e147:scripts/secure-2-attacks.ts:generic-api-key:180
